@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistem Inventaris Barang Cloud - Azure App Service</title>
+  <meta name="description" content="Aplikasi Web CRUD Inventaris Barang terintegrasi database SQLite untuk Tugas Mandiri Praktikum Komputasi Awan Modul 3 di Azure App Service.">
+  <meta name="theme-color" content="#0f172a">
+
+  <!-- Google Fonts: Plus Jakarta Sans & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons (CDN) -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-dark">
+  <!-- Background Glow Effects -->
+  <div class="bg-blur-orb orb-1"></div>
+  <div class="bg-blur-orb orb-2"></div>
+  <div class="bg-blur-orb orb-3"></div>
+
+  <!-- Header / Navigation -->
+  <header class="app-header">
+    <div class="container header-container">
+      <div class="brand-group">
+        <div class="brand-logo">
+          <i data-lucide="cloud"></i>
+        </div>
+        <div class="brand-text">
+          <div class="brand-badge-row">
+            <span class="azure-pill">
+              <span class="azure-dot"></span>
+              <span id="azure-status-text">Azure Cloud Ready</span>
+            </span>
+            <span class="modul-pill">Tugas Mandiri Modul 3</span>
+          </div>
+          <h1 class="brand-title">CloudStore <span>Inventaris</span></h1>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Theme Toggle -->
+        <button id="btn-theme-toggle" class="icon-btn" title="Ganti Tema (Dark/Light)">
+          <i data-lucide="moon" id="theme-icon"></i>
+        </button>
+
+        <!-- Tambah Barang CTA -->
+        <button id="btn-open-create-modal" class="btn btn-primary">
+          <i data-lucide="plus-circle"></i>
+          <span>Tambah Barang</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="container main-content">
+    
+    <!-- Hero / Stats Dashboard -->
+    <section class="stats-section" aria-label="Statistik Inventaris">
+      <div class="stat-card" id="stat-total-items-card">
+        <div class="stat-icon-wrapper icon-blue">
+          <i data-lucide="package"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label">Total Jenis Barang</span>
+          <div class="stat-value-group">
+            <span class="stat-value" id="stat-total-items">0</span>
+            <span class="stat-sub">produk</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card" id="stat-total-stock-card">
+        <div class="stat-icon-wrapper icon-emerald">
+          <i data-lucide="boxes"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label">Total Stok Fisik</span>
+          <div class="stat-value-group">
+            <span class="stat-value" id="stat-total-stock">0</span>
+            <span class="stat-sub">unit</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card" id="stat-total-value-card">
+        <div class="stat-icon-wrapper icon-amber">
+          <i data-lucide="wallet"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label">Nilai Aset Inventaris</span>
+          <div class="stat-value-group">
+            <span class="stat-value" id="stat-total-value">Rp 0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card" id="stat-low-stock-card">
+        <div class="stat-icon-wrapper icon-rose">
+          <i data-lucide="alert-triangle"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label">Perlu Restock</span>
+          <div class="stat-value-group">
+            <span class="stat-value" id="stat-low-stock">0</span>
+            <span class="stat-sub">stok ≤ 5</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Toolbar / Filter Bar -->
+    <section class="toolbar-section">
+      <div class="search-box">
+        <i data-lucide="search" class="search-icon"></i>
+        <input 
+          type="text" 
+          id="input-search" 
+          placeholder="Cari berdasarkan nama, kode (misal: BRG-001), atau deskripsi..." 
+          autocomplete="off"
+        >
+        <button id="btn-clear-search" class="clear-search-btn hidden" title="Hapus Pencarian">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="filters-group">
+        <div class="filter-item">
+          <label for="select-category" class="filter-label">
+            <i data-lucide="tag"></i> Kategori:
+          </label>
+          <select id="select-category" class="custom-select">
+            <option value="Semua">Semua Kategori</option>
+            <option value="Elektronik">Elektronik</option>
+            <option value="Aksesoris Komputer">Aksesoris Komputer</option>
+            <option value="Penyimpanan">Penyimpanan</option>
+            <option value="Perabot Kantor">Perabot Kantor</option>
+          </select>
+        </div>
+
+        <div class="filter-item">
+          <label for="select-sort" class="filter-label">
+            <i data-lucide="arrow-up-down"></i> Urutkan:
+          </label>
+          <select id="select-sort" class="custom-select">
+            <option value="id-desc">Terbaru Ditambahkan</option>
+            <option value="id-asc">Terlama Ditambahkan</option>
+            <option value="nama_barang-asc">Nama (A - Z)</option>
+            <option value="nama_barang-desc">Nama (Z - A)</option>
+            <option value="harga-asc">Harga (Termurah)</option>
+            <option value="harga-desc">Harga (Termahal)</option>
+            <option value="stok-asc">Stok (Tersedikit)</option>
+            <option value="stok-desc">Stok (Terbanyak)</option>
+          </select>
+        </div>
+
+        <!-- View Switcher (Table vs Grid Cards) -->
+        <div class="view-switcher" role="group" aria-label="Tampilan">
+          <button id="btn-view-table" class="view-btn active" title="Tampilan Tabel">
+            <i data-lucide="list"></i>
+          </button>
+          <button id="btn-view-grid" class="view-btn" title="Tampilan Grid Card">
+            <i data-lucide="layout-grid"></i>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Content Display (Table & Grid) -->
+    <section class="table-card-container">
+      <div class="content-header">
+        <div class="results-count">
+          Menampilkan <strong id="visible-count">0</strong> dari <strong id="total-count">0</strong> barang
+        </div>
+        <button id="btn-refresh" class="btn-text" title="Muat Ulang Data">
+          <i data-lucide="rotate-cw"></i> Segarkan Data
+        </button>
+      </div>
+
+      <!-- Loading State -->
+      <div id="loading-spinner" class="state-container hidden">
+        <div class="spinner"></div>
+        <p>Memuat data inventaris dari database SQLite...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="state-container hidden">
+        <div class="empty-icon">
+          <i data-lucide="inbox"></i>
+        </div>
+        <h3>Belum Ada Barang</h3>
+        <p>Tidak ada barang yang cocok dengan kriteria filter atau pencarian Anda.</p>
+        <button id="btn-empty-add" class="btn btn-primary">
+          <i data-lucide="plus"></i> Tambah Barang Sekarang
+        </button>
+      </div>
+
+      <!-- Table View -->
+      <div id="table-wrapper" class="table-responsive">
+        <table class="inventory-table" id="inventory-table">
+          <thead>
+            <tr>
+              <th scope="col" class="th-code">Kode</th>
+              <th scope="col" class="th-name">Nama Barang</th>
+              <th scope="col" class="th-category">Kategori</th>
+              <th scope="col" class="th-price text-right">Harga Satuan</th>
+              <th scope="col" class="th-stock text-center">Stok</th>
+              <th scope="col" class="th-total text-right">Total Nilai</th>
+              <th scope="col" class="th-actions text-center">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="inventory-table-body">
+            <!-- Diisi secara dinamis oleh JavaScript -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Grid Cards View (Hidden by default) -->
+      <div id="grid-wrapper" class="inventory-grid hidden">
+        <!-- Diisi secara dinamis oleh JavaScript -->
+      </div>
+    </section>
+  </main>
+
+  <!-- ======================= MODAL TAMBAH BARANG ======================= -->
+  <div id="modal-create" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-create-title">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon icon-blue">
+            <i data-lucide="package-plus"></i>
+          </div>
+          <h2 id="modal-create-title" class="modal-title">Tambah Barang Baru</h2>
+        </div>
+        <button class="modal-close-btn" data-close-modal="modal-create" aria-label="Tutup Modal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <form id="form-create-item" novalidate>
+        <div class="modal-body">
+          <div class="form-row two-cols">
+            <div class="form-group">
+              <label for="create-kode">Kode Barang <span class="optional">(Otomatis/Kustom)</span></label>
+              <div class="input-with-action">
+                <input type="text" id="create-kode" name="kode_barang" placeholder="Contoh: BRG-007" autocomplete="off">
+                <button type="button" id="btn-gen-code" class="btn-secondary-sm" title="Buat kode acak berikutnya">
+                  <i data-lucide="sparkles"></i> Auto
+                </button>
+              </div>
+              <small class="field-hint">Biarkan kosong untuk kode otomatis.</small>
+            </div>
+
+            <div class="form-group">
+              <label for="create-kategori">Kategori Barang <span class="required">*</span></label>
+              <input type="text" id="create-kategori" name="kategori" list="kategori-datalist" placeholder="Pilih atau ketik kategori..." required>
+              <datalist id="kategori-datalist">
+                <option value="Elektronik">
+                <option value="Aksesoris Komputer">
+                <option value="Penyimpanan">
+                <option value="Perabot Kantor">
+                <option value="Alat Tulis Kantor">
+              </datalist>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="create-nama">Nama Barang <span class="required">*</span></label>
+            <input type="text" id="create-nama" name="nama_barang" placeholder="Contoh: Monitor Gaming 27 Inch 144Hz" required>
+          </div>
+
+          <div class="form-row two-cols">
+            <div class="form-group">
+              <label for="create-harga">Harga Satuan (Rp) <span class="required">*</span></label>
+              <div class="input-prefix-wrap">
+                <span class="input-prefix">Rp</span>
+                <input type="number" id="create-harga" name="harga" min="0" step="1000" placeholder="0" required>
+              </div>
+              <div id="create-harga-preview" class="preview-text">Rp 0</div>
+            </div>
+
+            <div class="form-group">
+              <label for="create-stok">Jumlah Stok <span class="required">*</span></label>
+              <input type="number" id="create-stok" name="stok" min="0" step="1" placeholder="0" required>
+              <div id="create-stok-badge" class="preview-text">Status: 0 unit</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="create-deskripsi">Deskripsi Barang <span class="optional">(Opsional)</span></label>
+            <textarea id="create-deskripsi" name="deskripsi" rows="3" placeholder="Tambahkan catatan spesifikasi, warna, garansi, atau detail lainnya..."></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="modal-create">Batal</button>
+          <button type="submit" id="btn-submit-create" class="btn btn-primary">
+            <i data-lucide="check"></i>
+            <span>Simpan Barang</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======================= MODAL EDIT BARANG ======================= -->
+  <div id="modal-edit" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-edit-title">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon icon-amber">
+            <i data-lucide="edit-3"></i>
+          </div>
+          <h2 id="modal-edit-title" class="modal-title">Edit Data Barang</h2>
+        </div>
+        <button class="modal-close-btn" data-close-modal="modal-edit" aria-label="Tutup Modal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <form id="form-edit-item" novalidate>
+        <input type="hidden" id="edit-id" name="id">
+
+        <div class="modal-body">
+          <div class="form-row two-cols">
+            <div class="form-group">
+              <label for="edit-kode">Kode Barang <span class="required">*</span></label>
+              <input type="text" id="edit-kode" name="kode_barang" required>
+            </div>
+
+            <div class="form-group">
+              <label for="edit-kategori">Kategori Barang <span class="required">*</span></label>
+              <input type="text" id="edit-kategori" name="kategori" list="kategori-datalist" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="edit-nama">Nama Barang <span class="required">*</span></label>
+            <input type="text" id="edit-nama" name="nama_barang" required>
+          </div>
+
+          <div class="form-row two-cols">
+            <div class="form-group">
+              <label for="edit-harga">Harga Satuan (Rp) <span class="required">*</span></label>
+              <div class="input-prefix-wrap">
+                <span class="input-prefix">Rp</span>
+                <input type="number" id="edit-harga" name="harga" min="0" step="1000" required>
+              </div>
+              <div id="edit-harga-preview" class="preview-text">Rp 0</div>
+            </div>
+
+            <div class="form-group">
+              <label for="edit-stok">Jumlah Stok <span class="required">*</span></label>
+              <input type="number" id="edit-stok" name="stok" min="0" step="1" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="edit-deskripsi">Deskripsi Barang <span class="optional">(Opsional)</span></label>
+            <textarea id="edit-deskripsi" name="deskripsi" rows="3"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="modal-edit">Batal</button>
+          <button type="submit" id="btn-submit-edit" class="btn btn-primary">
+            <i data-lucide="save"></i>
+            <span>Simpan Perubahan</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======================= MODAL DETAIL BARANG ======================= -->
+  <div id="modal-detail" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-detail-title">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon icon-emerald">
+            <i data-lucide="eye"></i>
+          </div>
+          <h2 id="modal-detail-title" class="modal-title">Detail Barang</h2>
+        </div>
+        <button class="modal-close-btn" data-close-modal="modal-detail" aria-label="Tutup Modal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="modal-body detail-body">
+        <div class="detail-header-card">
+          <span class="detail-badge" id="detail-kategori">Kategori</span>
+          <h3 id="detail-nama" class="detail-title">Nama Barang</h3>
+          <span class="detail-code" id="detail-kode">BRG-000</span>
+        </div>
+
+        <div class="detail-grid">
+          <div class="detail-stat">
+            <span class="d-label">Harga Satuan</span>
+            <span class="d-value text-emerald" id="detail-harga">Rp 0</span>
+          </div>
+          <div class="detail-stat">
+            <span class="d-label">Jumlah Stok</span>
+            <span class="d-value" id="detail-stok">0 Unit</span>
+          </div>
+          <div class="detail-stat">
+            <span class="d-label">Total Valuasi Stok</span>
+            <span class="d-value text-amber" id="detail-total-value">Rp 0</span>
+          </div>
+          <div class="detail-stat">
+            <span class="d-label">Status Persediaan</span>
+            <span class="d-value" id="detail-status-pill">-</span>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4>Deskripsi Produk</h4>
+          <p id="detail-deskripsi" class="detail-description-text">-</p>
+        </div>
+
+        <div class="detail-meta">
+          <div><i data-lucide="calendar"></i> Dibuat: <span id="detail-created">-</span></div>
+          <div><i data-lucide="clock"></i> Diperbarui: <span id="detail-updated">-</span></div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" id="btn-detail-edit" class="btn btn-secondary">
+          <i data-lucide="edit-3"></i> Edit Barang Ini
+        </button>
+        <button type="button" class="btn btn-primary" data-close-modal="modal-detail">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================= MODAL HAPUS KONFIRMASI ======================= -->
+  <div id="modal-delete" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-delete-title">
+    <div class="modal-window modal-sm">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon icon-rose">
+            <i data-lucide="alert-octagon"></i>
+          </div>
+          <h2 id="modal-delete-title" class="modal-title">Konfirmasi Hapus</h2>
+        </div>
+        <button class="modal-close-btn" data-close-modal="modal-delete" aria-label="Tutup Modal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="modal-body delete-body">
+        <p>Apakah Anda yakin ingin menghapus barang berikut dari sistem inventaris?</p>
+        <div class="delete-item-preview">
+          <strong id="delete-item-name">Nama Barang</strong>
+          <span id="delete-item-code" class="code-pill">BRG-000</span>
+        </div>
+        <div class="alert-box-warning">
+          <i data-lucide="info"></i>
+          <span>Data yang dihapus dari database SQLite tidak dapat dikembalikan.</span>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal="modal-delete">Batal</button>
+        <button type="button" id="btn-confirm-delete" class="btn btn-danger">
+          <i data-lucide="trash-2"></i>
+          <span>Ya, Hapus Barang</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div class="container footer-container">
+      <div class="footer-left">
+        <p class="footer-title">
+          <i data-lucide="cloud"></i> Praktikum Komputasi Awan - Modul 3
+        </p>
+        <p class="footer-desc">Implementasi Web App CRUD & Database SQLite untuk Deployment ke Azure App Service</p>
+      </div>
+      <div class="footer-right">
+        <span class="tech-pill">Node.js</span>
+        <span class="tech-pill">Express.js</span>
+        <span class="tech-pill">SQLite</span>
+        <span class="tech-pill azure-tech">Azure App Service</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
